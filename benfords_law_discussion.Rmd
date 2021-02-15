@@ -116,6 +116,7 @@ benfords_law_data <- rbindlist(
   list(true_benfords_law, mn_benfords_law, wi_benfords_law, md_benfords_law), 
   use.names=TRUE
 )
+benfords_law_data[, leading_digit := as.factor(leading_digit)]
 ```
 
 ## Size of Each Dataset
@@ -132,11 +133,11 @@ cat(paste("Number of Cities in MD Data:", md_total_rows, "\n"))
 
 ```{r fig.width=10, fig.height=6}
 ggplot(benfords_law_data, aes(leading_digit, proportion, color=source)) + 
-  geom_point(size=2) +
+  geom_point(size=3, shape=15, alpha=0.7) +
   geom_line() +
   theme_light() +
   ggtitle("Benford's Law Applied to 2019 City Population Data for\nU.S. states Minnesota, Wisconsin, Maryland") +
-  xlab("Leading Digit (Population Size Estimate)") +
+  xlab("Leading Digit") +
   ylab("Proportion")
   
 ```
