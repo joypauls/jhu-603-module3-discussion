@@ -1,0 +1,152 @@
+---
+title: "Benford's Law Discussion - Module 3"
+author: "Joy Paulsen"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+---
+
+
+## Data Prep
+
+### Quick Summary
+
+We will be applying some reasonable filters and then taking a look at the 2019 population estimates for 3 states from the U.S. Census (column POPESTIMATE2019).
+
+In order to attempt to apply Benford's Law, we will take the first digit from the above column.
+
+### Notes
+
+The source data can be found at the [U.S. Census Website](https://www.census.gov/data/datasets/time-series/demo/popest/2010s-total-cities-and-towns.html#ds). They have datasets available for each U.S. state for years 2010-2019.
+
+The datasets included in this repo are copies from the above link.
+
+The states chosen for this study were Minnesota (my home state), Wisconsin (neighboring state), and Maryland (Johns Hopkins!).
+
+### Preprocess
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(stringr)
+
+
+# preprocess minnesota dataset
+mn_pop_data <- fread("./sub-est2019_27.csv")
+mn_pop_data <- mn_pop_data[NAME != "Minnesota"]
+mn_pop_data <- mn_pop_data[FUNCSTAT == "A"]
+mn_pop_data <- mn_pop_data[POPESTIMATE2019 > 0]
+mn_pop_data[, first_digit := as.numeric(
+  str_sub(as.character(POPESTIMATE2019), 1, 1)
+)]
+
+# preprocess wisconsin dataset
+wi_pop_data <- fread("./sub-est2019_55.csv")
+wi_pop_data <- wi_pop_data[NAME != "Wisconsin"]
+wi_pop_data <- wi_pop_data[FUNCSTAT == "A"]
+wi_pop_data <- wi_pop_data[POPESTIMATE2019 > 0]
+wi_pop_data[, first_digit := as.numeric(
+  str_sub(as.character(POPESTIMATE2019), 1, 1)
+)]
+
+# preprocess maryland dataset
+md_pop_data <- fread("./sub-est2019_24.csv")
+md_pop_data <- md_pop_data[NAME != "Maryland"]
+md_pop_data <- md_pop_data[FUNCSTAT == "A"]
+md_pop_data <- md_pop_data[POPESTIMATE2019 > 0]
+md_pop_data[, first_digit := as.numeric(
+  str_sub(as.character(POPESTIMATE2019), 1, 1)
+)]
+```
+
+### Calculate Proportions of Leading Digits
+
+```{r}
+digits <- 1:9
+
+# minnesota benford's dataset
+mn_total_rows <- mn_pop_data[, .N]
+mn_proportions <- sapply(digits, function(x) {
+  return(
+    mn_pop_data[first_digit == x, .N] / mn_total_rows
+  )
+})
+mn_benfords_law <- data.table(
+  leading_digit = digits,
+  proportion = mn_proportions,
+  source = "MN Cities Population"
+)
+
+# wisonsin benford's dataset
+wi_total_rows <- wi_pop_data[, .N]
+wi_proportions <- sapply(digits, function(x) {
+  return(
+    wi_pop_data[first_digit == x, .N] / wi_total_rows
+  )
+})
+wi_benfords_law <- data.table(
+  leading_digit = digits,
+  proportion = wi_proportions,
+  source = "WI Cities Population"
+)
+
+# maryland benford's law dataset
+md_total_rows <- md_pop_data[, .N]
+md_proportions <- sapply(digits, function(x) {
+  return(
+    md_pop_data[first_digit == x, .N] / md_total_rows
+  )
+})
+md_benfords_law <- data.table(
+  leading_digit = digits,
+  proportion = md_proportions,
+  source = "MD Cities Population"
+)
+
+# true benford's law proportions
+true_benfords_law <- data.table(
+  leading_digit = digits,
+  proportion = log10(1 + (1 / digits)),
+  source = "Benford's Law"
+)
+
+# combine together for plotting
+benfords_law_data <- rbindlist(
+  list(true_benfords_law, mn_benfords_law, wi_benfords_law, md_benfords_law), 
+  use.names=TRUE
+)
+```
+
+## Size of Each Dataset
+
+```{r}
+cat(paste("Number of Cities in MN Data:", mn_total_rows, "\n"))
+cat(paste("Number of Cities in WI Data:", wi_total_rows, "\n"))
+cat(paste("Number of Cities in MD Data:", md_total_rows, "\n"))
+```
+
+
+## Plot the Proportions and Compare to the True Benford's Law
+
+
+```{r fig.width=10, fig.height=6}
+ggplot(benfords_law_data, aes(leading_digit, proportion, color=source)) + 
+  geom_point(size=2) +
+  geom_line() +
+  theme_light() +
+  ggtitle("Benford's Law Applied to 2019 City Population Data for\nU.S. states Minnesota, Wisconsin, Maryland") +
+  xlab("Leading Digit (Population Size Estimate)") +
+  ylab("Proportion")
+  
+```
+
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
