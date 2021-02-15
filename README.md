@@ -12,3 +12,5 @@ The source data can be found at the [U.S. Census Website](https://www.census.gov
 
 `sub-est2019_24.csv`: Maryland City Population Data 2010-2019
 
+`sub-est2019_all.csv`: All U.S. City Population Data 2010-2019
+

@@ -22,7 +22,7 @@ The source data can be found at the [U.S. Census Website](https://www.census.gov
 
 The datasets included in this repo are copies from the above link.
 
-The states chosen for this study were Minnesota (my home state), Wisconsin (neighboring state), and Maryland (Johns Hopkins!).
+The states chosen for this study were Minnesota (my home state), Wisconsin (neighboring state), and Maryland (Johns Hopkins!). In addition the dataset including all U.S. cities was used as well.
 
 ### Preprocess
 
@@ -58,6 +58,15 @@ md_pop_data <- md_pop_data[POPESTIMATE2019 > 0]
 md_pop_data[, first_digit := as.numeric(
   str_sub(as.character(POPESTIMATE2019), 1, 1)
 )]
+
+# preprocess national dataset
+national_pop_data <- fread("./sub-est2019_all.csv")
+national_pop_data <- national_pop_data[NAME != STNAME]
+national_pop_data <- national_pop_data[FUNCSTAT == "A"]
+national_pop_data <- national_pop_data[POPESTIMATE2019 > 0]
+national_pop_data[, first_digit := as.numeric(
+  str_sub(as.character(POPESTIMATE2019), 1, 1)
+)]
 ```
 
 ### Calculate Proportions of Leading Digits
@@ -78,7 +87,7 @@ mn_benfords_law <- data.table(
   source = "MN Cities Population"
 )
 
-# wisonsin benford's dataset
+# wisconsin benford's dataset
 wi_total_rows <- wi_pop_data[, .N]
 wi_proportions <- sapply(digits, function(x) {
   return(
@@ -104,6 +113,19 @@ md_benfords_law <- data.table(
   source = "MD Cities Population"
 )
 
+# national benford's law dataset
+national_total_rows <- national_pop_data[, .N]
+national_proportions <- sapply(digits, function(x) {
+  return(
+    national_pop_data[first_digit == x, .N] / national_total_rows
+  )
+})
+national_benfords_law <- data.table(
+  leading_digit = digits,
+  proportion = national_proportions,
+  source = "All U.S. Cities Population"
+)
+
 # true benford's law proportions
 true_benfords_law <- data.table(
   leading_digit = digits,
@@ -111,9 +133,16 @@ true_benfords_law <- data.table(
   source = "Benford's Law"
 )
 
+
 # combine together for plotting
 benfords_law_data <- rbindlist(
-  list(true_benfords_law, mn_benfords_law, wi_benfords_law, md_benfords_law), 
+  list(
+    true_benfords_law, 
+    mn_benfords_law, 
+    wi_benfords_law, 
+    md_benfords_law, 
+    national_benfords_law
+  ), 
   use.names=TRUE
 )
 benfords_law_data[, leading_digit := as.factor(leading_digit)]
@@ -125,18 +154,27 @@ benfords_law_data[, leading_digit := as.factor(leading_digit)]
 cat(paste("Number of Cities in MN Data:", mn_total_rows, "\n"))
 cat(paste("Number of Cities in WI Data:", wi_total_rows, "\n"))
 cat(paste("Number of Cities in MD Data:", md_total_rows, "\n"))
+cat(paste("Number of Cities in National Data:", national_total_rows, "\n"))
 ```
 
 
 ## Plot the Proportions and Compare to the True Benford's Law
 
+```{r fig.width=10, fig.height=6}
+ggplot(benfords_law_data[source %in% c("Benford's Law", "All U.S. Cities Population")], aes(leading_digit, proportion, color=source)) +
+  geom_point(size=3, shape=15, alpha=0.7) +
+  theme_light() +
+  ggtitle("Benford's Law Applied to All U.S. 2019 City Population Data") +
+  xlab("Leading Digit") +
+  ylab("Proportion")
+  
+```
 
 ```{r fig.width=10, fig.height=6}
-ggplot(benfords_law_data, aes(leading_digit, proportion, color=source)) + 
+ggplot(benfords_law_data[source != "All U.S. Cities Population"], aes(leading_digit, proportion, color=source)) +
   geom_point(size=3, shape=15, alpha=0.7) +
-  geom_line() +
   theme_light() +
-  ggtitle("Benford's Law Applied to 2019 City Population Data for\nU.S. states Minnesota, Wisconsin, Maryland") +
+  ggtitle("Benford's Law Applied to 2019 City Population Data for U.S. states: Minnesota, Wisconsin, Maryland") +
   xlab("Leading Digit") +
   ylab("Proportion")
   
